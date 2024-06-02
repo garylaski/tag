@@ -17,12 +17,12 @@ import (
 
 func newMetadataVorbis() *metadataVorbis {
 	return &metadataVorbis{
-		c: make(map[string]string),
+		c: make(map[string][]string),
 	}
 }
 
 type metadataVorbis struct {
-	c map[string]string // the vorbis comments
+	c map[string][]string // the vorbis comments
 	p *Picture
 }
 
@@ -36,7 +36,7 @@ func (m *metadataVorbis) readVorbisComment(r io.Reader) error {
 	if err != nil {
 		return err
 	}
-	m.c["vendor"] = vendor
+	m.c["vendor"] = []string{vendor}
 
 	commentsLen, err := readUint32LittleEndian(r)
 	if err != nil {
@@ -56,11 +56,11 @@ func (m *metadataVorbis) readVorbisComment(r io.Reader) error {
 		if err != nil {
 			return err
 		}
-		m.c[strings.ToLower(k)] = v
+		m.c[strings.ToLower(k)] = append(m.c[strings.ToLower(k)], v)
 	}
 
 	if b64data, ok := m.c["metadata_block_picture"]; ok {
-		data, err := base64.StdEncoding.DecodeString(b64data)
+		data, err := base64.StdEncoding.DecodeString(b64data[0])
 		if err != nil {
 			return err
 		}
@@ -169,7 +169,7 @@ func (m *metadataVorbis) Raw() map[string]interface{} {
 }
 
 func (m *metadataVorbis) Title() string {
-	return m.c["title"]
+	return m.c["title"][0]
 }
 
 func (m *metadataVorbis) Artist() string {
@@ -177,36 +177,36 @@ func (m *metadataVorbis) Artist() string {
 	// The artist generally considered responsible for the work. In popular music
 	// this is usually the performing band or singer. For classical music it would
 	// be the composer. For an audio book it would be the author of the original text.
-	return m.c["artist"]
+	return m.c["artist"][0]
 }
 
 func (m *metadataVorbis) Album() string {
-	return m.c["album"]
+	return m.c["album"][0]
 }
 
 func (m *metadataVorbis) AlbumArtist() string {
 	// This field isn't actually included in the standard, though
 	// it is commonly assigned to albumartist.
-	return m.c["albumartist"]
+	return m.c["albumartist"][0]
 }
 
 func (m *metadataVorbis) Composer() string {
-	if m.c["composer"] != "" {
-		return m.c["composer"]
+	if _, ok := m.c["composer"]; ok {
+		return m.c["composer"][0]
 	}
 	// PERFORMER
 	// The artist(s) who performed the work. In classical music this would be the
 	// conductor, orchestra, soloists. In an audio book it would be the actor who
 	// did the reading. In popular music this is typically the same as the ARTIST
 	// and is omitted.
-	if m.c["performer"] != "" {
-		return m.c["performer"]
+	if _, ok := m.c["performer"]; ok {
+		return m.c["performer"][0]
 	}
-	return m.c["artist"]
+	return m.c["artist"][0]
 }
 
 func (m *metadataVorbis) Genre() string {
-	return m.c["genre"]
+	return m.c["genre"][0]
 }
 
 func (m *metadataVorbis) Year() int {
@@ -214,11 +214,11 @@ func (m *metadataVorbis) Year() int {
 
 	// The date need to follow the international standard https://en.wikipedia.org/wiki/ISO_8601
 	// and obviously the VorbisComment standard https://wiki.xiph.org/VorbisComment#Date_and_time
-	switch len(m.c["date"]) {
+	switch len(m.c["date"][0]) {
 	case 0:
 		// Fallback on year tag as some files use that.
 		if len(m.c["year"]) != 0 {
-			year, err := strconv.Atoi(m.c["year"])
+			year, err := strconv.Atoi(m.c["year"][0])
 			if err == nil {
 				return year
 			}
@@ -232,33 +232,33 @@ func (m *metadataVorbis) Year() int {
 		dateFormat = "2006-01-02"
 	}
 
-	t, _ := time.Parse(dateFormat, m.c["date"])
+	t, _ := time.Parse(dateFormat, m.c["date"][0])
 	return t.Year()
 }
 
 func (m *metadataVorbis) Track() (int, int) {
-	x, _ := strconv.Atoi(m.c["tracknumber"])
+	x, _ := strconv.Atoi(m.c["tracknumber"][0])
 	// https://wiki.xiph.org/Field_names
-	n, _ := strconv.Atoi(m.c["tracktotal"])
+	n, _ := strconv.Atoi(m.c["tracktotal"][0])
 	return x, n
 }
 
 func (m *metadataVorbis) Disc() (int, int) {
 	// https://wiki.xiph.org/Field_names
-	x, _ := strconv.Atoi(m.c["discnumber"])
-	n, _ := strconv.Atoi(m.c["disctotal"])
+	x, _ := strconv.Atoi(m.c["discnumber"][0])
+	n, _ := strconv.Atoi(m.c["disctotal"][0])
 	return x, n
 }
 
 func (m *metadataVorbis) Lyrics() string {
-	return m.c["lyrics"]
+	return m.c["lyrics"][0]
 }
 
 func (m *metadataVorbis) Comment() string {
-	if m.c["comment"] != "" {
-		return m.c["comment"]
+	if v, ok := m.c["comment"]; ok {
+		return v[0]
 	}
-	return m.c["description"]
+	return m.c["description"][0]
 }
 
 func (m *metadataVorbis) Picture() *Picture {

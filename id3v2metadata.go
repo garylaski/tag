@@ -58,7 +58,7 @@ func (m metadataID3v2) getString(k string) string {
 	if !ok {
 		return ""
 	}
-	return v.(string)
+	return v.([]string)[0]
 }
 
 func (m metadataID3v2) Format() Format              { return m.header.Version }

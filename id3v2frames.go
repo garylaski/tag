@@ -295,22 +295,22 @@ func validID3Frame(version Format, name string) bool {
 	return ok
 }
 
-func readWFrame(b []byte) (string, error) {
+func readWFrame(b []byte) ([]string, error) {
 	// Frame text is always encoded in ISO-8859-1
 	b = append([]byte{0}, b...)
 	return readTFrame(b)
 }
 
-func readTFrame(b []byte) (string, error) {
+func readTFrame(b []byte) ([]string, error) {
 	if len(b) == 0 {
-		return "", nil
+		return nil, nil
 	}
 
 	txt, err := decodeText(b[0], b[1:])
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	return strings.Join(strings.Split(txt, string(singleZero)), ""), nil
+	return strings.Split(txt, string(singleZero)), nil
 }
 
 const (
